@@ -35,21 +35,25 @@ public class ConsoleMessage
                     break;
             }
         }
-        Console.ForegroundColor = ConsoleColor.Gray;
 
         return type;
     }
 
     public static string getPath()
     {
+        Console.ForegroundColor = ConsoleColor.DarkGreen;
         string path = Directory.GetCurrentDirectory() + "/proxies/proxyToCheck.txt";
 
-        Console.WriteLine($"Is the path below a location to your proxy? y/n \n{path}");
-        bool isCorrect = Console.ReadLine() == "y" ? true : false;
+        Console.WriteLine($"\nIs the path below a location to your proxy? y/n \n{path}");
+        string input = Console.ReadLine();
 
-        if (isCorrect)
+        if (input == "y")
         {
             return path;
+        }
+        else if (File.Exists(input))
+        {
+            return input;
         }
         else
         {
@@ -65,14 +69,15 @@ public class ConsoleMessage
                 {
                     Console.WriteLine("File does not exist");
                 }
-            
+
             }
         }
     }
 
     public static int returnThreadNumber()
     {
-        Console.WriteLine("Choose number of threads to run (recommended 20-50): ");
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine("\nChoose number of threads to run (recommended 20-50): ");
         while (true)
         {
             try
@@ -89,6 +94,7 @@ public class ConsoleMessage
 
     public static void Exit(string? msg = null)
     {
+        Console.ForegroundColor = ConsoleColor.Red;
         if (msg != null)
         {
             Console.WriteLine(msg);

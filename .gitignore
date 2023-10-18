@@ -1,3 +1,6 @@
+# Local debugging files
+ProxyChecker/Proxies/
+
 # globs
 Makefile.in
 *.userprefs

@@ -36,7 +36,14 @@ internal class Program
             bot.Join();
         }
 
-        await WriteWorkingProxyAsync(Directories.WRITING_LOCATION);
+        if (_workingProxy.Count() != 0)
+        {
+            await WriteWorkingProxyAsync(Directories.WRITING_LOCATION);
+        }
+        else
+        {
+            Console.WriteLine("No proxy found");
+        }
         ConsoleMessage.Exit();
     }
 
@@ -57,7 +64,6 @@ internal class Program
             using StreamWriter writer = File.AppendText(path);
             foreach (var proxy in _workingProxy)
             {
-                Console.WriteLine("testing");
                 await writer.WriteLineAsync(proxy);
             }
             return _workingProxy.Count == 0;
