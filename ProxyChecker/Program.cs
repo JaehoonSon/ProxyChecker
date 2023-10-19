@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 
 namespace ProxyChecker;
@@ -8,7 +9,7 @@ internal class Program
     public static string _path, _type;
 
     public static ConcurrentQueue<string> _proxy = new();
-    public static List<string> _workingProxy = new();
+    public static BlockingCollection<string> _workingProxy = new();
 
     public static bool _IsRunning = true;
     public static int _success, _fail;
@@ -19,10 +20,11 @@ internal class Program
 
         _path = ConsoleMessage.getPath();
 
-        await ReadyProxyAsync(_path);
+        await ReadProxyAsync(_path);
 
 
         var bots = new Thread[ConsoleMessage.returnThreadNumber()];
+
         for (int i = 0; i < bots.Length; i++)
         {
             bots[i] = new(() => Worker().Wait());
@@ -30,20 +32,13 @@ internal class Program
         }
 
         _ = Task.Run(UpdateStatusAsync);
+        await WriteWorkingProxyInStreamAsync(Directories.WRITING_LOCATION);
 
         foreach (var bot in bots)
         {
             bot.Join();
         }
 
-        if (_workingProxy.Count() != 0)
-        {
-            await WriteWorkingProxyAsync(Directories.WRITING_LOCATION);
-        }
-        else
-        {
-            Console.WriteLine("No proxy found");
-        }
         ConsoleMessage.Exit();
     }
 
@@ -56,26 +51,24 @@ internal class Program
         }
     }
 
-    public static async ValueTask<bool> WriteWorkingProxyAsync(string path)
+    public static async Task WriteWorkingProxyInStreamAsync(string path)
     {
-        Console.WriteLine("Writing working proxy...");
         try
         {
             using StreamWriter writer = File.AppendText(path);
-            foreach (var proxy in _workingProxy)
+
+            foreach (var item in _workingProxy.GetConsumingEnumerable())
             {
-                await writer.WriteLineAsync(proxy);
+                await writer.WriteLineAsync(item);
             }
-            return _workingProxy.Count == 0;
         }
         catch
         {
-            return false;
+            ConsoleMessage.Exit("Failed to write proxies");
         }
-
     }
 
-    public static async ValueTask<bool> ReadyProxyAsync(string path)
+    public static async ValueTask<bool> ReadProxyAsync(string path)
     {
         Console.Title = "Reading proxies...";
         string? line;
@@ -98,8 +91,6 @@ internal class Program
                 ConsoleMessage.Exit("Failed to read proxies");
                 return false;
             }
-
-
     }
 
     public static async Task Worker()
@@ -124,6 +115,7 @@ internal class Program
                 httpClient.Timeout = TimeSpan.FromSeconds(1);
 
                 await httpClient.GetAsync("https://www.google.com/");
+
                 Interlocked.Increment(ref _success);
 
                 _workingProxy.Add(proxy);
@@ -132,7 +124,8 @@ internal class Program
             {
                 Interlocked.Increment(ref _fail);
             }
-            
         }
+
+        _workingProxy.CompleteAdding();
     }
 }

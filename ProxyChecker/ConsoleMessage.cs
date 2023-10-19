@@ -77,7 +77,7 @@ public class ConsoleMessage
     public static int returnThreadNumber()
     {
         Console.ForegroundColor = ConsoleColor.DarkYellow;
-        Console.WriteLine("\nChoose number of threads to run (recommended 20-50): ");
+        Console.WriteLine("\nChoose number of threads to run (recommended 200-300): ");
         while (true)
         {
             try
