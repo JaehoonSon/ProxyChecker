@@ -42,7 +42,7 @@ public class ConsoleMessage
     public static string getPath()
     {
         Console.ForegroundColor = ConsoleColor.DarkGreen;
-        string path = Directory.GetCurrentDirectory() + "/proxies/proxyToCheck.txt";
+        string path = Directories.READING_LOCATION != null ? Directories.READING_LOCATION : Directory.GetCurrentDirectory() + "/proxies/proxy.txt";
 
         Console.WriteLine($"\nIs the path below a location to your proxy? y/n \n{path}");
         string input = Console.ReadLine();
