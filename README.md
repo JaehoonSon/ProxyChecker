@@ -1,5 +1,5 @@
 # ProxyChecker
-A high-performant proxy checker built in C#. This proxy supports HTTP/s & SOCKS protocols. 
+A high-performance proxy checker built in C#. This proxy supports HTTP/s and SOCKS protocols. 
 
 ## Usage
 Configure reading and writing path in `Directories.cs`
