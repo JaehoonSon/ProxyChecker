@@ -25,7 +25,8 @@ internal class ConfigRunOptions
             {
                 case "--help" or "-h":
                     PrintUsage();
-                    return;
+                    Exit();
+                    break;
                 case "--print":
                     i++;
                     if (!(i < args.Length))
