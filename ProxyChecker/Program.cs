@@ -1,13 +1,13 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO.IsolatedStorage;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace ProxyChecker;
 
 internal class Program
 {
-    public static string _path, _type;
-
     public static ConcurrentQueue<string> _proxy = new();
     public static BlockingCollection<string> _workingProxy = new();
 
@@ -16,14 +16,24 @@ internal class Program
 
     public static async Task Main(string[] args)
     {
-        _type = ConsoleMessage.proxyOptions();
+        if (args.Length == 0)
+        {
+            ConfigRunOptions.PrintUsage();
+            ConfigRunOptions.Exit();
+        }
+        await ConfigRunOptions.CommandLineOptions(args);
 
-        _path = ConsoleMessage.getPath();
+        await Application();
+    }
 
-        await ReadProxyAsync(_path);
+    public static async Task Application()
+    {
+        if (ConfigRunOptions._isFile)
+            await ReadProxyAsync(ConfigRunOptions._sourceToRead);
+        else
+            await ReadProxyFromUrl(ConfigRunOptions._sourceToRead);
 
-
-        var bots = new Thread[ConsoleMessage.returnThreadNumber()];
+        var bots = new Thread[ConfigRunOptions._threads];
 
         for (int i = 0; i < bots.Length; i++)
         {
@@ -32,14 +42,15 @@ internal class Program
         }
 
         _ = Task.Run(UpdateStatusAsync);
-        await WriteWorkingProxyInStreamAsync(Directories.WRITING_LOCATION);
+
+        await WriteWorkingProxyInStreamAsync(ConfigRunOptions._pathToWrite);
 
         foreach (var bot in bots)
         {
             bot.Join();
         }
 
-        ConsoleMessage.Exit();
+        ConfigRunOptions.Exit();
     }
 
     public static async Task UpdateStatusAsync()
@@ -64,33 +75,56 @@ internal class Program
         }
         catch
         {
-            ConsoleMessage.Exit("Failed to write proxies");
+            ConfigRunOptions.Exit("Failed to write proxies");
         }
     }
 
-    public static async ValueTask<bool> ReadProxyAsync(string path)
+    public static async Task<bool> ReadProxyAsync(string path)
     {
         Console.Title = "Reading proxies...";
         string? line;
 
-            try
+        try
+        {
+            using var reader = new StreamReader(path);
+            while (
+                (line = await reader.ReadLineAsync()) != null
+                )
             {
-                using var reader = new StreamReader(path);
-                while (
-                    (line = await reader.ReadLineAsync()) != null
-                    )
-                {
-                    _proxy.Enqueue(_type + line);
-                }
-                Console.Title = "Done reading proxies";
-                return !_proxy.IsEmpty;
+                _proxy.Enqueue(ConfigRunOptions._proxyType + line);
+            }
+            Console.Title = "Done reading proxies";
+            return !_proxy.IsEmpty;
+        }
+        catch
+        {
+            ConfigRunOptions.Exit("Failed to read proxies");
+            return false;
+        }
+    }
 
-            }
-            catch
+    public static async Task<bool> ReadProxyFromUrl(string url)
+    {
+        try
+        {
+            var client = new HttpClient();
+            var res = await client.GetAsync(ConfigRunOptions._sourceToRead);
+            var mediaType = res.Content.Headers.ContentType;
+            if (mediaType != null &&
+                !mediaType.MediaType.StartsWith("text/"))
             {
-                ConsoleMessage.Exit("Failed to read proxies");
-                return false;
+                ConfigRunOptions.Exit("URL is not text");
             }
+            foreach (var proxy in 
+                (await res.Content.ReadAsStringAsync()).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                )
+            {
+                _proxy.Enqueue(proxy);
+            }
+            Console.Title = "Done reading proxies";
+            return !_proxy.IsEmpty;
+        }
+        catch { return false; }
     }
 
     public static async Task Worker()
